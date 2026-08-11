@@ -138,6 +138,11 @@ jobs:
               errors.push('Inclua ou modifique pelo menos um arquivo de apresentação, como `.pdf`, `.pptx`, `.odp` ou `.png`.');
             }
 
+            if (errors.length === 0) {
+              core.info('Nenhuma falha de validação foi encontrada.');
+              return;
+            }
+
             const failureMessage = [
               commentMarker,
               '⚠️ Esta PR não está seguindo as regras de contribuição.',
