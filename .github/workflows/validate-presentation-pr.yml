@@ -96,12 +96,12 @@ jobs:
             if (hasCodeWriteLabel) {
               successMessage = [
                 commentMarker,
-                '✅ Esta PR está seguindo todas as regras de contribuição.',
+                '✅ This PR is following all contribution rules.',
                 '',
-                '- A label `code-write` está presente e tem prioridade quando múltiplas labels são usadas.',
-                `- Labels atuais: ${labelsSummary}.`,
+                '- The `code-write` label is present and takes precedence when multiple labels are used.',
+                `- Current labels: ${labelsSummary}.`,
               ].join('\n');
-              infoMessage = 'A label `code-write` está presente; a validação de apresentação foi ignorada.';
+              infoMessage = 'The `code-write` label is present; presentation validation was skipped.';
             } else {
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 owner: context.repo.owner,
@@ -118,18 +118,18 @@ jobs:
               if (hasPresentationLabel && changedPresentationFiles.length > 0) {
                 successMessage = [
                   commentMarker,
-                  '✅ Esta PR está seguindo todas as regras de contribuição.',
+                  '✅ This PR is following all contribution rules.',
                   '',
-                  `- Labels atuais: ${labelsSummary}.`,
-                  `- Arquivos de apresentação detectados: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+                  `- Current labels: ${labelsSummary}.`,
+                  `- Detected presentation files: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
                 ].join('\n');
-                infoMessage = `A validação de apresentação foi aprovada para: ${changedPresentationFiles.join(', ')}`;
+                infoMessage = `Presentation validation passed for: ${changedPresentationFiles.join(', ')}`;
               } else if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
-                validationError = 'Nenhum arquivo de apresentação foi encontrado e a PR não tem a label `presentation`. Se esta PR é de manutenção do repositório, documentação ou código, adicione a label `code-write`.';
+                validationError = 'No presentation files were found and this PR is missing the `presentation` label. If this is a repository maintenance, docs, or code-only PR, add the `code-write` label.';
               } else if (!hasPresentationLabel) {
-                validationError = 'Adicione a label `presentation` nesta PR.';
+                validationError = 'Add the `presentation` label to this PR.';
               } else if (changedPresentationFiles.length === 0) {
-                validationError = 'Inclua ou modifique pelo menos um arquivo de apresentação, como `.pdf`, `.pptx`, `.odp` ou `.png`.';
+                validationError = 'Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.';
               }
             }
 
@@ -140,16 +140,27 @@ jobs:
             }
 
             if (!validationError) {
-              core.setFailed('Estado de validação inesperado para a PR.');
+              const unexpectedStateMessage = [
+                commentMarker,
+                '⚠️ This PR could not be validated automatically.',
+                '',
+                `- Current labels: ${labelsSummary}.`,
+                `- Detected presentation files: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
+                '',
+                '- An unexpected validation state was reached. Please re-run the workflow or adjust the PR labels.',
+              ].join('\n');
+
+              await upsertComment(unexpectedStateMessage);
+              core.setFailed('Unexpected PR validation state.');
               return;
             }
 
             const failureMessage = [
               commentMarker,
-              '⚠️ Esta PR não está seguindo as regras de contribuição.',
+              '⚠️ This PR is not following the contribution rules.',
               '',
-              `- Labels atuais: ${labelsSummary}.`,
-              `- Arquivos de apresentação detectados: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'nenhum'}.`,
+              `- Current labels: ${labelsSummary}.`,
+              `- Detected presentation files: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
               '',
               `- ${validationError}`,
             ].join('\n');
