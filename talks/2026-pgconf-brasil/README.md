@@ -56,5 +56,5 @@ Esta talk mostra como usar PostgreSQL como núcleo de uma arquitetura de inferê
 
 ## Recursos
 
-- Event page: https://pgconf.com.br/
+- Event page: https://2026.pgconf.com.br/
 - Recording: to be added when available
