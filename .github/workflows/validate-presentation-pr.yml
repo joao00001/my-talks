@@ -6,12 +6,15 @@ on:
       - opened
       - reopened
       - synchronize
+      - edited
       - labeled
       - unlabeled
       - ready_for_review
+      - converted_to_draft
 
 permissions:
   contents: read
+  issues: write
   pull-requests: read
 
 jobs:
@@ -23,6 +26,7 @@ jobs:
         with:
           script: |
             const path = require('path');
+            const commentMarker = '<!-- validate-presentation-pr -->';
 
             const presentationExtensions = new Set([
               '.pdf',
@@ -41,8 +45,49 @@ jobs:
             const labels = context.payload.pull_request.labels.map(({ name }) => name);
             const hasCodeWriteLabel = labels.includes('code-write');
             const hasPresentationLabel = labels.includes('presentation');
+            const labelsSummary = labels.length > 0 ? labels.map((label) => `\`${label}\``).join(', ') : 'none';
+            const issueNumber = context.payload.pull_request.number;
+
+            const upsertComment = async (body) => {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+
+              const existingComment = comments.find(({ body: commentBody, user }) => {
+                return commentBody?.includes(commentMarker) && user?.login === 'github-actions[bot]';
+              });
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body,
+                });
+                return;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+            };
 
             if (hasCodeWriteLabel) {
+              const successMessage = [
+                commentMarker,
+                '✅ Essa PR está seguindo todas as regras de contribuição.',
+                '',
+                '- A label `code-write` está presente e tem prioridade quando múltiplas labels são usadas.',
+                `- Labels atuais: ${labelsSummary}.`,
+              ].join('\n');
+
+              await upsertComment(successMessage);
               core.info('The `code-write` label is present; skipping presentation validation.');
               return;
             }
@@ -50,7 +95,7 @@ jobs:
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: issueNumber,
               per_page: 100,
             });
 
@@ -60,6 +105,15 @@ jobs:
               .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
 
             if (hasPresentationLabel && changedPresentationFiles.length > 0) {
+              const successMessage = [
+                commentMarker,
+                '✅ Essa PR está seguindo todas as regras de contribuição.',
+                '',
+                `- Labels atuais: ${labelsSummary}.`,
+                `- Arquivos de apresentação detectados: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+              ].join('\n');
+
+              await upsertComment(successMessage);
               core.info(`Presentation validation passed for: ${changedPresentationFiles.join(', ')}`);
               return;
             }
@@ -74,4 +128,15 @@ jobs:
               errors.push('Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.');
             }
 
+            const failureMessage = [
+              commentMarker,
+              '⚠️ Esta PR não está seguindo as regras de contribuição.',
+              '',
+              `- Labels atuais: ${labelsSummary}.`,
+              `- Arquivos de apresentação detectados: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
+              '',
+              ...errors.map((error) => `- ${error}`),
+            ].join('\n');
+
+            await upsertComment(failureMessage);
             core.setFailed(errors.join('\n'));

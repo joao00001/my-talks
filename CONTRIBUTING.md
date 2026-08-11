@@ -49,6 +49,7 @@
 
 - Use the `presentation` label when the PR adds or updates presentation files such as `.pdf`, `.pptx`, `.odp`, or slide assets like `.png`.
 - Use the `code-write` label for repository maintenance changes that should bypass the presentation-file validation.
+- If a PR has multiple labels, `code-write` takes precedence and bypasses the presentation validation.
 
 ## Reusable README template
 
