@@ -67,7 +67,7 @@ jobs:
             const errors = [];
 
             if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
-              errors.push('No presentation files were found and the PR is missing the `presentation` label. If this is a repository, docs, or code-only PR, add the `code-write` label.');
+              errors.push('No presentation files were found and the PR is missing the `presentation` label. If this is a repository maintenance, docs, or code-only PR, add the `code-write` label.');
             } else if (!hasPresentationLabel) {
               errors.push('Add the `presentation` label to this PR.');
             } else if (changedPresentationFiles.length === 0) {
