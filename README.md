@@ -20,6 +20,7 @@ This table is updated automatically when a `presentation` PR is merged.
 | Year | Event | Title | Tema | Idioma | Status |
 |------|-------|-------|------|--------|--------|
 | 2026 | PgConf Brasil | [PostgreSQL como Motor de Inferência: Tokens, Embeddings e Gradients](talks/2026-pgconf-brasil/README.md) | PostgreSQL + IA (RAG, embeddings, ACID) | PT-BR | Final |
+| 2025 | PgConf Brasil | [Como testar seu ambiente de produção de forma fiel usando BDD e integration tests](talks/2025-pgconf-brasil/README.md) | PostgreSQL + IA (RAG, embeddings, ACID) | EN | Final |
 <!-- talks-table:end -->
 
 ## How to Navigate
