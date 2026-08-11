@@ -1,0 +1,180 @@
+name: Validate presentation PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - labeled
+      - unlabeled
+      - ready_for_review
+      - converted_to_draft
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: validate-presentation-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Validate labels and presentation files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = require('path');
+            const commentMarker = '<!-- validate-presentation-pr -->';
+
+            const presentationExtensions = new Set([
+              '.pdf',
+              '.ppt',
+              '.pptx',
+              '.odp',
+              '.key',
+              '.png',
+              '.jpg',
+              '.jpeg',
+              '.gif',
+              '.svg',
+              '.webp',
+            ]);
+
+            const issueNumber = context.payload.pull_request.number;
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: issueNumber,
+            });
+
+            const labels = pullRequest.labels.map(({ name }) => name);
+            const hasCodeWriteLabel = labels.includes('code-write');
+            const hasPresentationLabel = labels.includes('presentation');
+            const labelsSummary = labels.length > 0 ? labels.map((label) => `\`${label}\``).join(', ') : 'none';
+
+            const findExistingComment = async () => {
+              for await (const response of github.paginate.iterator(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              })) {
+                const existingComment = response.data.find(({ body: commentBody, user }) => {
+                  return commentBody?.includes(commentMarker) && user?.login === 'github-actions[bot]';
+                });
+
+                if (existingComment) {
+                  return existingComment;
+                }
+              }
+
+              return null;
+            };
+
+            const upsertComment = async (body) => {
+              const existingComment = await findExistingComment();
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body,
+                });
+                return;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+            };
+
+            let changedPresentationFiles = [];
+            let successMessage = null;
+            let infoMessage = null;
+            let validationError = null;
+
+            if (hasCodeWriteLabel) {
+              successMessage = [
+                commentMarker,
+                '✅ This PR is following all contribution rules.',
+                '',
+                '- The `code-write` label is present and takes precedence when multiple labels are used.',
+                `- Current labels: ${labelsSummary}.`,
+              ].join('\n');
+              infoMessage = 'The `code-write` label is present; presentation validation was skipped.';
+            } else {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: issueNumber,
+                per_page: 100,
+              });
+
+              changedPresentationFiles = files
+                .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
+                .map(({ filename }) => filename)
+                .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
+
+              if (hasPresentationLabel && changedPresentationFiles.length > 0) {
+                successMessage = [
+                  commentMarker,
+                  '✅ This PR is following all contribution rules.',
+                  '',
+                  `- Current labels: ${labelsSummary}.`,
+                  `- Detected presentation files: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+                ].join('\n');
+                infoMessage = `Presentation validation passed for: ${changedPresentationFiles.join(', ')}`;
+              } else if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
+                validationError = 'No presentation files were found and this PR is missing the `presentation` label. If this is a repository maintenance, docs, or code-only PR, add the `code-write` label.';
+              } else if (!hasPresentationLabel) {
+                validationError = 'Add the `presentation` label to this PR.';
+              } else if (changedPresentationFiles.length === 0) {
+                validationError = 'Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.';
+              }
+            }
+
+            if (successMessage) {
+              await upsertComment(successMessage);
+              core.info(infoMessage);
+              return;
+            }
+
+            if (!validationError) {
+              const unexpectedStateMessage = [
+                commentMarker,
+                '⚠️ This PR could not be validated automatically.',
+                '',
+                `- Current labels: ${labelsSummary}.`,
+                `- Detected presentation files: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
+                '',
+                '- An unexpected validation state was reached. Please re-run the workflow or adjust the PR labels.',
+              ].join('\n');
+
+              await upsertComment(unexpectedStateMessage);
+              core.setFailed('Unexpected PR validation state.');
+              return;
+            }
+
+            const failureMessage = [
+              commentMarker,
+              '⚠️ This PR is not following the contribution rules.',
+              '',
+              `- Current labels: ${labelsSummary}.`,
+              `- Detected presentation files: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
+              '',
+              `- ${validationError}`,
+            ].join('\n');
+
+            await upsertComment(failureMessage);
+            core.setFailed(validationError);
