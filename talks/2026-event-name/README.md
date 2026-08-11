@@ -1,7 +1,7 @@
 # Example Talk
 
-**Event:** Event Name 2024  
-**Date:** October 2024  
+**Event:** Event Name 2026  
+**Date:** October 2026  
 **Location:** City, Country  
 
 ## Abstract

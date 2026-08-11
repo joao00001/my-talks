@@ -15,7 +15,7 @@ talks/
 
 | Year | Event | Title |
 |------|-------|-------|
-| 2024 | Event Name | [Example Talk](talks/2024-event-name/README.md) |
+| 2026 | Event Name | [Example Talk](talks/2026-event-name/README.md) |
 
 ## How to Navigate
 
