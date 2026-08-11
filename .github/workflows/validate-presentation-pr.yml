@@ -15,7 +15,7 @@ on:
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   validate:
@@ -88,7 +88,7 @@ jobs:
               ].join('\n');
 
               await upsertComment(successMessage);
-              core.info('The `code-write` label is present; skipping presentation validation.');
+              core.info('A label `code-write` está presente; a validação de apresentação foi ignorada.');
               return;
             }
 
@@ -114,18 +114,18 @@ jobs:
               ].join('\n');
 
               await upsertComment(successMessage);
-              core.info(`Presentation validation passed for: ${changedPresentationFiles.join(', ')}`);
+              core.info(`A validação de apresentação foi aprovada para: ${changedPresentationFiles.join(', ')}`);
               return;
             }
 
             const errors = [];
 
             if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
-              errors.push('No presentation files were found and the PR is missing the `presentation` label. If this is a repository maintenance, docs, or code-only PR, add the `code-write` label.');
+              errors.push('Nenhum arquivo de apresentação foi encontrado e a PR não tem a label `presentation`. Se esta PR é de manutenção do repositório, documentação ou código, adicione a label `code-write`.');
             } else if (!hasPresentationLabel) {
-              errors.push('Add the `presentation` label to this PR.');
+              errors.push('Adicione a label `presentation` nesta PR.');
             } else if (changedPresentationFiles.length === 0) {
-              errors.push('Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.');
+              errors.push('Inclua ou modifique pelo menos um arquivo de apresentação, como `.pdf`, `.pptx`, `.odp` ou `.png`.');
             }
 
             const failureMessage = [
@@ -133,7 +133,7 @@ jobs:
               '⚠️ Esta PR não está seguindo as regras de contribuição.',
               '',
               `- Labels atuais: ${labelsSummary}.`,
-              `- Arquivos de apresentação detectados: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'none'}.`,
+              `- Arquivos de apresentação detectados: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'nenhum'}.`,
               '',
               ...errors.map((error) => `- ${error}`),
             ].join('\n');
