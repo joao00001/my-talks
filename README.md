@@ -15,7 +15,7 @@ talks/
 
 | Year | Event | Title |
 |------|-------|-------|
-| 2024 | PGConf.EU | [Example Talk](talks/2024-pgconf-eu/README.md) |
+| 2024 | Event Name | [Example Talk](talks/2024-event-name/README.md) |
 
 ## How to Navigate
 

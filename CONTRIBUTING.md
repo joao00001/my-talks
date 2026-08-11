@@ -8,7 +8,7 @@
    talks/<year>-<event-slug>/
    ```
 
-   Example: `talks/2024-pgconf-eu/`
+   Example: `talks/2024-event-name/`
 
 2. Inside the directory, add:
    - `README.md` — Talk title, abstract, event name, date, and any relevant links.
@@ -21,9 +21,9 @@
 ```markdown
 # Talk Title
 
-**Event:** PGConf.EU 2024  
+**Event:** Event Name 2024  
 **Date:** October 2024  
-**Location:** Athens, Greece  
+**Location:** City, Country  
 
 ## Abstract
 

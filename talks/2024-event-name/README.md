@@ -1,8 +1,8 @@
 # Example Talk
 
-**Event:** PGConf.EU 2024  
+**Event:** Event Name 2024  
 **Date:** October 2024  
-**Location:** Athens, Greece  
+**Location:** City, Country  
 
 ## Abstract
 
