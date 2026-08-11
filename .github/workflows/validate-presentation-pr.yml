@@ -47,7 +47,7 @@ jobs:
               '.webp',
             ]);
 
-            const talkDirectoryPattern = /^talks\/[^/]+\//;
+            const talkDirectoryPattern = /^talks\/\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\//;
             const issueNumber = context.payload.pull_request.number;
             const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
