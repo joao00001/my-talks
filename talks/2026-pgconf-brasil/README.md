@@ -6,6 +6,9 @@
 **Track:** PostgreSQL + IA aplicada  
 **Duration:** 45 min (a confirmar)  
 **Speaker:** João Detomini (EDB / Barman Team)
+**Theme:** PostgreSQL + IA (RAG, embeddings, ACID)  
+**Language:** PT-BR  
+**Status:** Final
 
 ## Abstract
 
