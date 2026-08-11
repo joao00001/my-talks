@@ -48,17 +48,27 @@ jobs:
             const labelsSummary = labels.length > 0 ? labels.map((label) => `\`${label}\``).join(', ') : 'none';
             const issueNumber = context.payload.pull_request.number;
 
-            const upsertComment = async (body) => {
-              const comments = await github.paginate(github.rest.issues.listComments, {
+            const findExistingComment = async () => {
+              for await (const response of github.paginate.iterator(github.rest.issues.listComments, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
                 per_page: 100,
-              });
+              })) {
+                const existingComment = response.data.find(({ body: commentBody, user }) => {
+                  return commentBody?.includes(commentMarker) && user?.login === 'github-actions[bot]';
+                });
 
-              const existingComment = comments.find(({ body: commentBody, user }) => {
-                return commentBody?.includes(commentMarker) && user?.login === 'github-actions[bot]';
-              });
+                if (existingComment) {
+                  return existingComment;
+                }
+              }
+
+              return null;
+            };
+
+            const upsertComment = async (body) => {
+              const existingComment = await findExistingComment();
 
               if (existingComment) {
                 await github.rest.issues.updateComment({
@@ -81,7 +91,7 @@ jobs:
             if (hasCodeWriteLabel) {
               const successMessage = [
                 commentMarker,
-                '✅ Essa PR está seguindo todas as regras de contribuição.',
+                '✅ Esta PR está seguindo todas as regras de contribuição.',
                 '',
                 '- A label `code-write` está presente e tem prioridade quando múltiplas labels são usadas.',
                 `- Labels atuais: ${labelsSummary}.`,
@@ -107,7 +117,7 @@ jobs:
             if (hasPresentationLabel && changedPresentationFiles.length > 0) {
               const successMessage = [
                 commentMarker,
-                '✅ Essa PR está seguindo todas as regras de contribuição.',
+                '✅ Esta PR está seguindo todas as regras de contribuição.',
                 '',
                 `- Labels atuais: ${labelsSummary}.`,
                 `- Arquivos de apresentação detectados: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
