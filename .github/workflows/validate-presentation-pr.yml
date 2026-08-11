@@ -47,6 +47,7 @@ jobs:
               '.webp',
             ]);
 
+            const talkDirectoryPattern = /^talks\/\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*\//;
             const issueNumber = context.payload.pull_request.number;
             const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -125,14 +126,22 @@ jobs:
                 .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
                 .map(({ filename }) => filename)
                 .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
+              const invalidPresentationFiles = changedPresentationFiles
+                .filter((filename) => !talkDirectoryPattern.test(filename));
 
-              if (hasPresentationLabel && changedPresentationFiles.length > 0) {
+              if (invalidPresentationFiles.length > 0) {
+                validationError = [
+                  'Presentation files must live under `talks/<year>-<event-slug>/`.',
+                  `Move these files before merging: ${invalidPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+                ].join(' ');
+              } else if (hasPresentationLabel && changedPresentationFiles.length > 0) {
                 successMessage = [
                   commentMarker,
                   '✅ This PR is following all contribution rules.',
                   '',
                   `- Current labels: ${labelsSummary}.`,
                   `- Detected presentation files: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+                  '- All detected presentation files are under `talks/<year>-<event-slug>/`.',
                 ].join('\n');
                 infoMessage = `Presentation validation passed for: ${changedPresentationFiles.join(', ')}`;
               } else if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
