@@ -74,6 +74,8 @@ jobs:
               errors.push('Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.');
             }
 
-            errors.push('If this PR is only for repository or code changes, add the `code-write` label to bypass this check.');
+            if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
+              errors.push('If this PR is only for repository or code changes, add the `code-write` label to bypass this check.');
+            }
 
             core.setFailed(errors.join('\n'));
