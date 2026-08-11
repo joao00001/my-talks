@@ -88,58 +88,54 @@ jobs:
               });
             };
 
+            let changedPresentationFiles = [];
+            let successMessage = null;
+            let infoMessage = null;
+            let validationError = null;
+
             if (hasCodeWriteLabel) {
-              const successMessage = [
+              successMessage = [
                 commentMarker,
                 '✅ Esta PR está seguindo todas as regras de contribuição.',
                 '',
                 '- A label `code-write` está presente e tem prioridade quando múltiplas labels são usadas.',
                 `- Labels atuais: ${labelsSummary}.`,
               ].join('\n');
+              infoMessage = 'A label `code-write` está presente; a validação de apresentação foi ignorada.';
+            } else {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: issueNumber,
+                per_page: 100,
+              });
 
+              changedPresentationFiles = files
+                .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
+                .map(({ filename }) => filename)
+                .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
+
+              if (hasPresentationLabel && changedPresentationFiles.length > 0) {
+                successMessage = [
+                  commentMarker,
+                  '✅ Esta PR está seguindo todas as regras de contribuição.',
+                  '',
+                  `- Labels atuais: ${labelsSummary}.`,
+                  `- Arquivos de apresentação detectados: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
+                ].join('\n');
+                infoMessage = `A validação de apresentação foi aprovada para: ${changedPresentationFiles.join(', ')}`;
+              } else if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
+                validationError = 'Nenhum arquivo de apresentação foi encontrado e a PR não tem a label `presentation`. Se esta PR é de manutenção do repositório, documentação ou código, adicione a label `code-write`.';
+              } else if (!hasPresentationLabel) {
+                validationError = 'Adicione a label `presentation` nesta PR.';
+              } else if (changedPresentationFiles.length === 0) {
+                validationError = 'Inclua ou modifique pelo menos um arquivo de apresentação, como `.pdf`, `.pptx`, `.odp` ou `.png`.';
+              }
+            }
+
+            if (successMessage) {
               await upsertComment(successMessage);
-              core.info('A label `code-write` está presente; a validação de apresentação foi ignorada.');
-              return;
-            }
-
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: issueNumber,
-              per_page: 100,
-            });
-
-            const changedPresentationFiles = files
-              .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
-              .map(({ filename }) => filename)
-              .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
-
-            if (hasPresentationLabel && changedPresentationFiles.length > 0) {
-              const successMessage = [
-                commentMarker,
-                '✅ Esta PR está seguindo todas as regras de contribuição.',
-                '',
-                `- Labels atuais: ${labelsSummary}.`,
-                `- Arquivos de apresentação detectados: ${changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ')}.`,
-              ].join('\n');
-
-              await upsertComment(successMessage);
-              core.info(`A validação de apresentação foi aprovada para: ${changedPresentationFiles.join(', ')}`);
-              return;
-            }
-
-            const errors = [];
-
-            if (!hasPresentationLabel && changedPresentationFiles.length === 0) {
-              errors.push('Nenhum arquivo de apresentação foi encontrado e a PR não tem a label `presentation`. Se esta PR é de manutenção do repositório, documentação ou código, adicione a label `code-write`.');
-            } else if (!hasPresentationLabel) {
-              errors.push('Adicione a label `presentation` nesta PR.');
-            } else if (changedPresentationFiles.length === 0) {
-              errors.push('Inclua ou modifique pelo menos um arquivo de apresentação, como `.pdf`, `.pptx`, `.odp` ou `.png`.');
-            }
-
-            if (errors.length === 0) {
-              core.info('Nenhuma falha de validação foi encontrada.');
+              core.info(infoMessage);
               return;
             }
 
@@ -150,8 +146,8 @@ jobs:
               `- Labels atuais: ${labelsSummary}.`,
               `- Arquivos de apresentação detectados: ${changedPresentationFiles.length > 0 ? changedPresentationFiles.map((filename) => `\`${filename}\``).join(', ') : 'nenhum'}.`,
               '',
-              ...errors.map((error) => `- ${error}`),
+              `- ${validationError}`,
             ].join('\n');
 
             await upsertComment(failureMessage);
-            core.setFailed(errors.join('\n'));
+            core.setFailed(validationError);
