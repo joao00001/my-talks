@@ -38,6 +38,7 @@
 - Directory: `talks/<year>-<event-slug>/`
 - Slides file: `slides.pdf`
 - Optional files: place under `assets/`
+- Presentation PR assets (`.pdf`, `.pptx`, `.odp`, `.png`, etc.) must stay inside `talks/<year>-<event-slug>/`
 
 ## Publication checklist
 
@@ -45,12 +46,14 @@
 - [ ] `README.md` includes all required metadata
 - [ ] `README.md` includes "Slide summary"
 - [ ] Slides are available as `slides.pdf`
+- [ ] Any presentation assets in the PR are inside `talks/<year>-<event-slug>/`
 - [ ] `README.md` includes the metadata used to update the root talks table (`Theme`, `Language`, and `Status`)
 - [ ] Links were checked (event page, references, recording if available)
 
 ## Pull request labels
 
 - Use the `presentation` label when the PR adds or updates presentation files such as `.pdf`, `.pptx`, `.odp`, or slide assets like `.png`.
+- Presentation files in `presentation` PRs must be under `talks/<year>-<event-slug>/`.
 - Use the `code-write` label for repository maintenance changes that should bypass the presentation-file validation.
 - If a PR has multiple labels, `code-write` takes precedence and bypasses the presentation validation.
 - `presentation` PRs also validate the talk metadata used by the root `README.md` table and, after merge, automatically sync that table on `main`.

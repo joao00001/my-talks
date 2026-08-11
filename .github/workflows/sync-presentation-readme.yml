@@ -39,6 +39,20 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issueNumber = context.payload.pull_request.number;
+            const talkDirectoryPattern = /^talks\/([^/]+)\//;
+            const presentationExtensions = new Set([
+              '.pdf',
+              '.ppt',
+              '.pptx',
+              '.odp',
+              '.key',
+              '.png',
+              '.jpg',
+              '.jpeg',
+              '.gif',
+              '.svg',
+              '.webp',
+            ]);
             const changedFiles = await github.paginate(github.rest.pulls.listFiles, {
               owner,
               repo,
@@ -46,17 +60,37 @@ jobs:
               per_page: 100,
             });
 
+            const changedPresentationFiles = changedFiles
+              .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
+              .map(({ filename }) => filename)
+              .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
+            const invalidPresentationFiles = changedPresentationFiles
+              .filter((filename) => !talkDirectoryPattern.test(filename));
             const talkDirectories = [...new Set(
               changedFiles
                 .map(({ filename }) => {
-                  const match = filename.match(/^talks\/([^/]+)\//);
+                  const match = filename.match(talkDirectoryPattern);
                   return match ? match[1] : null;
                 })
                 .filter(Boolean)
             )];
 
+            if (invalidPresentationFiles.length > 0) {
+              core.setFailed([
+                'Presentation files must live under `talks/<year>-<event-slug>/`.',
+                '',
+                ...invalidPresentationFiles.map((filename) => `- \`${filename}\``),
+              ].join('\n'));
+              return;
+            }
+
+            if (changedPresentationFiles.length > 0 && talkDirectories.length === 0) {
+              core.setFailed('Presentation files were changed, but no `talks/<year>-<event-slug>/` directory was updated.');
+              return;
+            }
+
             if (talkDirectories.length === 0) {
-              core.info('No talk directories changed; metadata sync validation is not required.');
+              core.setFailed('A `presentation` PR must update files inside `talks/<year>-<event-slug>/` so the root README sync has metadata to process.');
               return;
             }
 
