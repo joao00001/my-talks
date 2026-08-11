@@ -39,7 +39,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issueNumber = context.payload.pull_request.number;
-            const talkDirectoryPattern = /^talks\/([^/]+)\//;
+            const talkDirectoryPattern = /^talks\/(\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*)\//;
             const presentationExtensions = new Set([
               '.pdf',
               '.ppt',
