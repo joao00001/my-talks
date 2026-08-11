@@ -1,7 +1,7 @@
 # PostgreSQL como Motor de Inferência: Tokens, Embeddings e Gradients
 
 **Event:** PgConf Brasil 2026  
-**Date:** 2026  
+**Date:** 2026-MM (a confirmar)  
 **Location:** Brasil  
 **Track:** PostgreSQL + IA aplicada  
 **Duration:** 45 min (a confirmar)  
@@ -54,7 +54,7 @@ Esta talk mostra como usar PostgreSQL como núcleo de uma arquitetura de inferê
 - PostgreSQL TOAST docs: https://www.postgresql.org/docs/16/storage-toast.html
 - Barman docs: https://pgbarman.org/documentation/
 
-## Resources
+## Recursos
 
 - Event page: https://pgconf.com.br/
 - Recording: to be added when available

@@ -40,7 +40,7 @@
 
 - [ ] Directory follows `talks/<year>-<event-slug>/`
 - [ ] `README.md` includes all required metadata
-- [ ] `README.md` includes "Resumo dos slides"
+- [ ] `README.md` includes "Slide summary"
 - [ ] Slides are available as `slides.pdf`
 - [ ] Root `README.md` talks table is updated
 - [ ] Links were checked (event page, references, recording if available)
@@ -61,15 +61,15 @@
 
 Short description of the talk.
 
-## Público-alvo
+## Audience
 
 - Audience profile
 
-## Principais aprendizados
+## Key takeaways
 
 - Key takeaways
 
-## Resumo dos slides
+## Slide summary
 
 1. Topic
 2. Topic
