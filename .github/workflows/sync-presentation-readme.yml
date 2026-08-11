@@ -118,6 +118,7 @@ jobs:
           const readmePath = path.join(repoRoot, 'README.md');
           const startMarker = '<!-- talks-table:start -->';
           const endMarker = '<!-- talks-table:end -->';
+          const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
           const extractValue = (content, fieldName) => {
             const match = content.match(new RegExp(`^\\*\\*${fieldName}:\\*\\*\\s+(.+)$`, 'm'));
@@ -183,7 +184,7 @@ jobs:
           }
 
           const updatedReadme = rootReadme.replace(
-            new RegExp(`${startMarker}[\\s\\S]*?${endMarker}`),
+            new RegExp(`${escapeRegExp(startMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`),
             `${startMarker}\n${tableLines.join('\n')}\n${endMarker}`,
           );
 
