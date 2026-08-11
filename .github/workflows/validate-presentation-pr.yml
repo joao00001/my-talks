@@ -1,0 +1,79 @@
+name: Validate presentation PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate labels and presentation files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const path = require('path');
+
+            const presentationExtensions = new Set([
+              '.pdf',
+              '.ppt',
+              '.pptx',
+              '.odp',
+              '.key',
+              '.png',
+              '.jpg',
+              '.jpeg',
+              '.gif',
+              '.svg',
+              '.webp',
+            ]);
+
+            const labels = context.payload.pull_request.labels.map(({ name }) => name);
+            const hasCodeWriteLabel = labels.includes('code-write');
+            const hasPresentationLabel = labels.includes('presentation');
+
+            if (hasCodeWriteLabel) {
+              core.info('The `code-write` label is present; skipping presentation validation.');
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const changedPresentationFiles = files
+              .filter(({ status }) => ['added', 'modified', 'renamed', 'copied', 'changed'].includes(status))
+              .map(({ filename }) => filename)
+              .filter((filename) => presentationExtensions.has(path.extname(filename).toLowerCase()));
+
+            if (hasPresentationLabel && changedPresentationFiles.length > 0) {
+              core.info(`Presentation validation passed for: ${changedPresentationFiles.join(', ')}`);
+              return;
+            }
+
+            const errors = [];
+
+            if (!hasPresentationLabel) {
+              errors.push('Add the `presentation` label to this PR.');
+            }
+
+            if (changedPresentationFiles.length === 0) {
+              errors.push('Include or modify at least one presentation file such as `.pdf`, `.pptx`, `.odp`, or `.png`.');
+            }
+
+            errors.push('If this PR is only for repository or code changes, add the `code-write` label to bypass this check.');
+
+            core.setFailed(errors.join('\n'));
