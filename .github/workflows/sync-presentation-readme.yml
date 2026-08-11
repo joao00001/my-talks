@@ -1,0 +1,203 @@
+name: Sync presentation README
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - labeled
+      - ready_for_review
+      - closed
+
+concurrency:
+  group: sync-presentation-readme-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-metadata:
+    if: github.event.action != 'closed' && contains(github.event.pull_request.labels.*.name, 'presentation')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out PR contents
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Validate talk metadata required by the root README
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.payload.pull_request.number;
+            const changedFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: issueNumber,
+              per_page: 100,
+            });
+
+            const talkDirectories = [...new Set(
+              changedFiles
+                .map(({ filename }) => {
+                  const match = filename.match(/^talks\/([^/]+)\//);
+                  return match ? match[1] : null;
+                })
+                .filter(Boolean)
+            )];
+
+            if (talkDirectories.length === 0) {
+              core.info('No talk directories changed; metadata sync validation is not required.');
+              return;
+            }
+
+            const requiredPatterns = [
+              { label: 'title', pattern: /^#\s+.+/m },
+              { label: 'Event', pattern: /^\*\*Event:\*\*\s+.+/m },
+              { label: 'Theme', pattern: /^\*\*Theme:\*\*\s+.+/m },
+              { label: 'Language', pattern: /^\*\*Language:\*\*\s+.+/m },
+              { label: 'Status', pattern: /^\*\*Status:\*\*\s+.+/m },
+            ];
+
+            const errors = [];
+
+            for (const talkDirectory of talkDirectories) {
+              const readmePath = path.join(process.cwd(), 'talks', talkDirectory, 'README.md');
+
+              if (!fs.existsSync(readmePath)) {
+                errors.push(`- \`talks/${talkDirectory}/README.md\` is missing.`);
+                continue;
+              }
+
+              const content = fs.readFileSync(readmePath, 'utf8');
+              const missingFields = requiredPatterns
+                .filter(({ pattern }) => !pattern.test(content))
+                .map(({ label }) => label);
+
+              if (missingFields.length > 0) {
+                errors.push(`- \`talks/${talkDirectory}/README.md\` is missing: ${missingFields.join(', ')}.`);
+              }
+            }
+
+            if (errors.length > 0) {
+              core.setFailed([
+                'The root README sync requires talk metadata to be present.',
+                '',
+                ...errors,
+              ].join('\n'));
+            }
+
+  sync-root-readme:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'presentation')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Rebuild talks table
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const repoRoot = process.cwd();
+          const talksRoot = path.join(repoRoot, 'talks');
+          const readmePath = path.join(repoRoot, 'README.md');
+          const startMarker = '<!-- talks-table:start -->';
+          const endMarker = '<!-- talks-table:end -->';
+
+          const extractValue = (content, fieldName) => {
+            const match = content.match(new RegExp(`^\\*\\*${fieldName}:\\*\\*\\s+(.+)$`, 'm'));
+            return match ? match[1].trim() : null;
+          };
+
+          const talkEntries = fs.readdirSync(talksRoot, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => {
+              const directoryName = entry.name;
+              const talkReadmeRelativePath = path.posix.join('talks', directoryName, 'README.md');
+              const talkReadmePath = path.join(repoRoot, talkReadmeRelativePath);
+
+              if (!fs.existsSync(talkReadmePath)) {
+                return null;
+              }
+
+              const content = fs.readFileSync(talkReadmePath, 'utf8');
+              const titleMatch = content.match(/^#\s+(.+)$/m);
+              const yearMatch = directoryName.match(/^(\d{4})-/);
+              const title = titleMatch ? titleMatch[1].trim() : null;
+              const year = yearMatch ? yearMatch[1] : extractValue(content, 'Date')?.slice(0, 4) ?? '';
+              const event = extractValue(content, 'Event');
+              const theme = extractValue(content, 'Theme') ?? extractValue(content, 'Track');
+              const language = extractValue(content, 'Language');
+              const status = extractValue(content, 'Status');
+
+              if (!title || !event || !theme || !language || !status) {
+                throw new Error(`Missing required metadata in ${talkReadmeRelativePath}.`);
+              }
+
+              return {
+                year,
+                event,
+                title,
+                theme,
+                language,
+                status,
+                relativePath: talkReadmeRelativePath,
+              };
+            })
+            .filter(Boolean)
+            .sort((left, right) => {
+              const yearDiff = Number(right.year) - Number(left.year);
+              if (yearDiff !== 0) {
+                return yearDiff;
+              }
+
+              return left.event.localeCompare(right.event) || left.title.localeCompare(right.title);
+            });
+
+          const tableLines = [
+            '| Year | Event | Title | Tema | Idioma | Status |',
+            '|------|-------|-------|------|--------|--------|',
+            ...talkEntries.map((entry) => `| ${entry.year} | ${entry.event} | [${entry.title}](${entry.relativePath}) | ${entry.theme} | ${entry.language} | ${entry.status} |`),
+          ];
+
+          const rootReadme = fs.readFileSync(readmePath, 'utf8');
+
+          if (!rootReadme.includes(startMarker) || !rootReadme.includes(endMarker)) {
+            throw new Error('Talk table markers were not found in README.md.');
+          }
+
+          const updatedReadme = rootReadme.replace(
+            new RegExp(`${startMarker}[\\s\\S]*?${endMarker}`),
+            `${startMarker}\n${tableLines.join('\n')}\n${endMarker}`,
+          );
+
+          fs.writeFileSync(readmePath, updatedReadme);
+          NODE
+
+      - name: Commit synced README
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "README.md already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: sync talks table"
+          git push

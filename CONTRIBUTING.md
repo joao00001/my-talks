@@ -15,7 +15,7 @@
    - `slides.pdf` as the canonical slide file name.
    - Optional `assets/` for supporting files used by the talk.
 
-3. Update the **Talks** table in the root `README.md` with a link to your new directory.
+3. Add the metadata required for the root `README.md` talks table. After a `presentation` PR is merged, the repository workflow updates that table automatically.
 
 ## Required fields in each talk README
 
@@ -25,6 +25,9 @@
 - Location
 - Track
 - Duration
+- Theme
+- Language
+- Status
 - Abstract
 - Slides link
 - Slide summary (3 to 6+ bullets)
@@ -42,7 +45,7 @@
 - [ ] `README.md` includes all required metadata
 - [ ] `README.md` includes "Slide summary"
 - [ ] Slides are available as `slides.pdf`
-- [ ] Root `README.md` talks table is updated
+- [ ] `README.md` includes the metadata used to update the root talks table (`Theme`, `Language`, and `Status`)
 - [ ] Links were checked (event page, references, recording if available)
 
 ## Pull request labels
@@ -50,6 +53,7 @@
 - Use the `presentation` label when the PR adds or updates presentation files such as `.pdf`, `.pptx`, `.odp`, or slide assets like `.png`.
 - Use the `code-write` label for repository maintenance changes that should bypass the presentation-file validation.
 - If a PR has multiple labels, `code-write` takes precedence and bypasses the presentation validation.
+- `presentation` PRs also validate the talk metadata used by the root `README.md` table and, after merge, automatically sync that table on `main`.
 
 ## Reusable README template
 
@@ -61,7 +65,10 @@
 **Location:** City, Country  
 **Track:** Track name  
 **Duration:** 30-60 min  
-**Speaker:** Name / Team
+**Speaker:** Name / Team  
+**Theme:** Main topic for the root talks table  
+**Language:** PT-BR / EN / ES  
+**Status:** Draft / Final
 
 ## Abstract
 
