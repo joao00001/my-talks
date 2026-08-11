@@ -144,14 +144,15 @@ jobs:
               const theme = extractValue(content, 'Theme') ?? extractValue(content, 'Track');
               const language = extractValue(content, 'Language');
               const status = extractValue(content, 'Status');
+              const displayEvent = year ? event?.replace(new RegExp(`\\s+${year}$`), '').trim() : event;
 
-              if (!title || !event || !theme || !language || !status) {
+              if (!title || !event || !displayEvent || !theme || !language || !status) {
                 throw new Error(`Missing required metadata in ${talkReadmeRelativePath}.`);
               }
 
               return {
                 year,
-                event,
+                event: displayEvent,
                 title,
                 theme,
                 language,
