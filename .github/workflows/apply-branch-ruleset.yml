@@ -1,0 +1,66 @@
+name: Apply branch protection ruleset
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-branch-ruleset.yml
+  workflow_dispatch:
+
+jobs:
+  apply-ruleset:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Apply ruleset via GitHub API
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            // List existing rulesets to check if ours already exists
+            const { data: existing } = await github.rest.repos.getRepoRulesets({
+              owner,
+              repo,
+            });
+
+            const RULESET_NAME = 'Protect default branch';
+            const found = existing.find(r => r.name === RULESET_NAME);
+
+            const rulesetPayload = {
+              name: RULESET_NAME,
+              target: 'branch',
+              enforcement: 'active',
+              conditions: {
+                ref_name: {
+                  include: ['~DEFAULT_BRANCH'],
+                  exclude: [],
+                },
+              },
+              rules: [
+                { type: 'deletion' },
+                { type: 'non_fast_forward' },
+                { type: 'required_linear_history' },
+              ],
+            };
+
+            if (found) {
+              await github.rest.repos.updateRepoRuleset({
+                owner,
+                repo,
+                ruleset_id: found.id,
+                ...rulesetPayload,
+              });
+              core.info(`Updated ruleset id=${found.id}`);
+            } else {
+              const { data } = await github.rest.repos.createRepoRuleset({
+                owner,
+                repo,
+                ...rulesetPayload,
+              });
+              core.info(`Created ruleset id=${data.id}`);
+            }
