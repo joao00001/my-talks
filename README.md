@@ -7,15 +7,16 @@ A public collection of my talks and presentations (slides), mainly from PostgreS
 ```
 talks/
 └── <year>-<event>/
-    ├── slides.*        # Presentation file (PDF, PPTX, etc.)
-    └── README.md       # Talk title, abstract, and event details
+    ├── README.md       # Talk context and metadata
+    ├── slides.pdf      # Final slide deck
+    └── assets/         # Optional images/files used by the talk
 ```
 
 ## Talks
 
-| Year | Event | Title |
-|------|-------|-------|
-| 2026 | Event Name | [Example Talk](talks/2026-event-name/README.md) |
+| Year | Event | Title | Tema | Idioma | Status |
+|------|-------|-------|------|--------|--------|
+| 2026 | PgConf Brasil | [PostgreSQL como Motor de Inferência: Tokens, Embeddings e Gradients](talks/2026-pgconf-brasil/README.md) | PostgreSQL + IA (RAG, embeddings, ACID) | PT-BR | Final |
 
 ## How to Navigate
 
