@@ -139,6 +139,11 @@ jobs:
               return;
             }
 
+            if (!validationError) {
+              core.setFailed('Estado de validação inesperado para a PR.');
+              return;
+            }
+
             const failureMessage = [
               commentMarker,
               '⚠️ Esta PR não está seguindo as regras de contribuição.',
